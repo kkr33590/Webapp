@@ -1,0 +1,47 @@
+name: Build Unsigned iOS IPA
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Unsigned IPA
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode Project
+        run: xcodegen generate
+
+      - name: Build Unsigned Archive
+        run: |
+          xcodebuild archive \
+            -project VehicleRCFinder.xcodeproj \
+            -scheme VehicleRCFinder \
+            -configuration Release \
+            -archivePath build/VehicleRCFinder.xcarchive \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Package Unsigned IPA
+        run: |
+          mkdir -p build/Payload
+          cp -r build/VehicleRCFinder.xcarchive/Products/Applications/VehicleRCFinder.app build/Payload/
+          cd build
+          zip -r VehicleRCFinder-Unsigned.ipa Payload
+
+      - name: Upload Unsigned IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VehicleRCFinder-Unsigned-IPA
+          path: build/VehicleRCFinder-Unsigned.ipa
+          if-no-files-found: error
