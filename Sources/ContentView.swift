@@ -9,6 +9,19 @@ struct KeyValueItem: Identifiable {
     let isImportant: Bool
 }
 
+// മോഡേൺ ഗ്ലാസ്-പിൽ ബട്ടൺ സ്റ്റൈൽ
+struct ModernPillButtonStyle: ButtonStyle {
+    var accent: Color = .white
+    var isProminent: Bool = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.94 : 1.0)
+            .opacity(configuration.isPressed ? 0.85 : 1.0)
+            .animation(.spring(response: 0.25, dampingFraction: 0.68), value: configuration.isPressed)
+    }
+}
+
 struct ContentView: View {
     @State private var vehicleNumber: String = ""
     @State private var searchedPlate: String = ""
@@ -19,6 +32,7 @@ struct ContentView: View {
     @State private var showRaw: Bool = false
     @State private var copiedToast: String? = nil
 
+    @Namespace private var tabNamespace
     @FocusState private var isInputFocused: Bool
     @AppStorage("beam_enabled") private var beamEnabled = true
     @AppStorage("beam_palette") private var paletteKey = "neon"
@@ -44,118 +58,174 @@ struct ContentView: View {
         return items.filter { !highlightIDs.contains($0.id) }
     }
 
+    private var formattedShareText: String {
+        let header = searchedPlate.isEmpty ? "Vehicle RC Details" : "Vehicle RC: \(searchedPlate)"
+        let bodyText = items.map { "• \($0.key): \($0.value)" }.joined(separator: "\n")
+        return bodyText.isEmpty ? rawResponse : "\(header)\n\n\(bodyText)"
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
-                // Deep Pro Background
-                Color(red: 0.04, green: 0.05, blue: 0.08)
+                // Deep Obsidian Background
+                Color(red: 0.035, green: 0.04, blue: 0.065)
                     .ignoresSafeArea()
 
-                // Ambient Glows
+                // Dynamic Top Ambient Light
                 VStack {
                     RadialGradient(
-                        colors: [primaryAccent.opacity(0.22), Color.clear],
+                        colors: [primaryAccent.opacity(0.24), secondaryAccent.opacity(0.08), Color.clear],
                         center: .top,
                         startRadius: 10,
-                        endRadius: 360
+                        endRadius: 380
                     )
-                    .frame(height: 360)
+                    .frame(height: 380)
                     Spacer()
                 }
                 .ignoresSafeArea()
 
-                VStack(spacing: 16) {
-                    // Header & Theme Selector
+                VStack(spacing: 14) {
+                    // Top Header Bar
                     HStack(alignment: .center) {
                         VStack(alignment: .leading, spacing: 3) {
                             HStack(spacing: 6) {
                                 Circle()
                                     .fill(primaryAccent)
                                     .frame(width: 7, height: 7)
-                                Text("SMART RC LOOKUP")
-                                    .font(.system(size: 11, weight: .bold))
+                                    .shadow(color: primaryAccent, radius: 4)
+                                Text("NEXT-GEN RC ENGINE")
+                                    .font(.system(size: 10, weight: .heavy))
                                     .tracking(1.8)
                                     .foregroundColor(primaryAccent)
                             }
 
                             Text("Vehicle Info Pro")
-                                .font(.title2)
-                                .fontWeight(.bold)
+                                .font(.system(size: 24, weight: .bold, design: .rounded))
                                 .foregroundColor(.white)
                         }
 
                         Spacer()
 
-                        Menu {
-                            Section("Beam Theme") {
-                                ForEach(BeamPalette.options, id: \.key) { option in
-                                    Button {
-                                        withAnimation(.easeInOut(duration: 0.3)) {
-                                            paletteKey = option.key
-                                        }
-                                    } label: {
-                                        HStack {
-                                            Text(option.title)
-                                            if paletteKey == option.key {
-                                                Image(systemName: "checkmark")
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            Divider()
-                            Button {
-                                withAnimation {
-                                    beamEnabled.toggle()
-                                }
-                            } label: {
-                                Label(
-                                    beamEnabled ? "Disable Glow Beam" : "Enable Glow Beam",
-                                    systemImage: beamEnabled ? "sparkles" : "sparkle"
-                                )
+                        // Modern Beam Glow Toggle Button
+                        Button {
+                            let gen = UIImpactFeedbackGenerator(style: .light)
+                            gen.impactOccurred()
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                beamEnabled.toggle()
                             }
                         } label: {
                             HStack(spacing: 6) {
-                                Circle()
-                                    .fill(
-                                        LinearGradient(
-                                            colors: activeColors,
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
-                                    .frame(width: 13, height: 13)
-                                Text(BeamPalette.options.first(where: { $0.key == paletteKey })?.title ?? "Neon")
-                                    .font(.caption)
-                                    .fontWeight(.semibold)
-                                Image(systemName: "chevron.down")
-                                    .font(.caption2)
+                                Image(systemName: beamEnabled ? "sparkles" : "sparkle")
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundColor(beamEnabled ? primaryAccent : .white.opacity(0.45))
+                                Text(beamEnabled ? "Glow On" : "Glow Off")
+                                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                                    .foregroundColor(.white.opacity(0.9))
                             }
-                            .foregroundColor(.white.opacity(0.92))
-                            .padding(.horizontal, 12)
+                            .padding(.horizontal, 13)
                             .padding(.vertical, 8)
-                            .background(Color.white.opacity(0.08))
+                            .background(.ultraThinMaterial.opacity(0.6))
+                            .background(Color.white.opacity(0.06))
                             .clipShape(Capsule())
                             .overlay(
                                 Capsule()
-                                    .stroke(Color.white.opacity(0.14), lineWidth: 1)
+                                    .stroke(
+                                        LinearGradient(
+                                            colors: [Color.white.opacity(0.25), Color.white.opacity(0.05)],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        ),
+                                        lineWidth: 1
+                                    )
                             )
                         }
+                        .buttonStyle(ModernPillButtonStyle())
                     }
                     .padding(.horizontal)
-                    .padding(.top, 8)
+                    .padding(.top, 6)
 
-                    // Search Input Card
+                    // Horizontal Modern Theme Selector Pills
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(BeamPalette.options, id: \.key) { option in
+                                let isSelected = paletteKey == option.key
+                                let colors = BeamPalette.named(option.key)
+
+                                Button {
+                                    let gen = UISelectionFeedbackGenerator()
+                                    gen.selectionChanged()
+                                    withAnimation(.spring(response: 0.32, dampingFraction: 0.75)) {
+                                        paletteKey = option.key
+                                    }
+                                } label: {
+                                    HStack(spacing: 6) {
+                                        Circle()
+                                            .fill(
+                                                LinearGradient(
+                                                    colors: colors,
+                                                    startPoint: .topLeading,
+                                                    endPoint: .bottomTrailing
+                                                )
+                                            )
+                                            .frame(width: 10, height: 10)
+                                            .shadow(color: isSelected ? (colors.first ?? .clear) : .clear, radius: 4)
+
+                                        Text(option.title)
+                                            .font(.system(size: 12, weight: isSelected ? .bold : .medium, design: .rounded))
+                                            .foregroundColor(isSelected ? .white : .white.opacity(0.6))
+                                    }
+                                    .padding(.horizontal, 13)
+                                    .padding(.vertical, 7)
+                                    .background(
+                                        ZStack {
+                                            if isSelected {
+                                                Capsule()
+                                                    .fill(
+                                                        LinearGradient(
+                                                            colors: [
+                                                                (colors.first ?? .blue).opacity(0.28),
+                                                                (colors.last ?? .purple).opacity(0.18)
+                                                            ],
+                                                            startPoint: .topLeading,
+                                                            endPoint: .bottomTrailing
+                                                        )
+                                                    )
+                                            } else {
+                                                Capsule()
+                                                    .fill(Color.white.opacity(0.045))
+                                            }
+                                        }
+                                    )
+                                    .overlay(
+                                        Capsule()
+                                            .stroke(
+                                                isSelected ? (colors.first ?? .white).opacity(0.65) : Color.white.opacity(0.08),
+                                                lineWidth: isSelected ? 1.2 : 1
+                                            )
+                                    )
+                                }
+                                .buttonStyle(ModernPillButtonStyle())
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
+
+                    // Modern Search & Action Container
                     VStack(spacing: 12) {
                         HStack(spacing: 10) {
-                            Image(systemName: "magnifyingglass.circle.fill")
-                                .foregroundColor(primaryAccent)
-                                .font(.system(size: 20))
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .fill(primaryAccent.opacity(0.15))
+                                    .frame(width: 34, height: 34)
+                                Image(systemName: "car.front.waves.up")
+                                    .foregroundColor(primaryAccent)
+                                    .font(.system(size: 16, weight: .semibold))
+                            }
 
-                            TextField("", text: $vehicleNumber, prompt: Text("Enter RC Number (e.g. KL55A9200)").foregroundColor(.white.opacity(0.35)))
+                            TextField("", text: $vehicleNumber, prompt: Text("KL55A9200").foregroundColor(.white.opacity(0.28)))
                                 .textInputAutocapitalization(.characters)
                                 .autocorrectionDisabled(true)
-                                .font(.system(size: 17, weight: .bold, design: .monospaced))
+                                .font(.system(size: 18, weight: .bold, design: .monospaced))
                                 .foregroundColor(.white)
                                 .focused($isInputFocused)
                                 .submitLabel(.search)
@@ -163,68 +233,142 @@ struct ContentView: View {
                                     fetchVehicleDetails()
                                 }
 
-                            if !vehicleNumber.isEmpty {
+                            // Modern Paste / Clear Mini-Pill Buttons
+                            if vehicleNumber.isEmpty {
                                 Button {
+                                    if let clip = UIPasteboard.general.string?.trimmingCharacters(in: .whitespacesAndNewlines), !clip.isEmpty {
+                                        let gen = UIImpactFeedbackGenerator(style: .light)
+                                        gen.impactOccurred()
+                                        withAnimation(.spring(response: 0.25, dampingFraction: 0.75)) {
+                                            vehicleNumber = clip.uppercased()
+                                        }
+                                    }
+                                } label: {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "doc.on.clipboard")
+                                        Text("Paste")
+                                    }
+                                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                                    .foregroundColor(.white.opacity(0.85))
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    .background(Color.white.opacity(0.1))
+                                    .clipShape(Capsule())
+                                    .overlay(
+                                        Capsule()
+                                            .stroke(Color.white.opacity(0.14), lineWidth: 1)
+                                    )
+                                }
+                                .buttonStyle(ModernPillButtonStyle())
+                            } else {
+                                Button {
+                                    let gen = UIImpactFeedbackGenerator(style: .light)
+                                    gen.impactOccurred()
                                     withAnimation(.easeOut(duration: 0.15)) {
                                         vehicleNumber = ""
                                     }
                                 } label: {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .foregroundColor(.white.opacity(0.45))
+                                    Image(systemName: "xmark")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundColor(.white.opacity(0.8))
+                                        .frame(width: 26, height: 26)
+                                        .background(Color.white.opacity(0.12))
+                                        .clipShape(Circle())
                                 }
+                                .buttonStyle(ModernPillButtonStyle())
                             }
                         }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 13)
-                        .background(Color.white.opacity(0.06))
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .background(Color.black.opacity(0.32))
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .stroke(
+                                    LinearGradient(
+                                        colors: [Color.white.opacity(0.18), Color.white.opacity(0.04)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 1
+                                )
                         )
                         .borderBeam(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous),
+                            RoundedRectangle(cornerRadius: 16, style: .continuous),
                             active: isInputFocused || isLoading,
                             lineWidth: 1.8,
-                            duration: isLoading ? 1.2 : 2.8
+                            duration: isLoading ? 1.1 : 2.6
                         )
 
+                        // Ultra-Modern Glass & Tactile Primary CTA Button
                         Button(action: fetchVehicleDetails) {
-                            HStack(spacing: 8) {
+                            HStack(spacing: 10) {
                                 if isLoading {
                                     ProgressView()
                                         .tint(.white)
-                                    Text("Fetching Vehicle Data...")
-                                        .fontWeight(.semibold)
+                                    Text("Scanning RC Database...")
+                                        .font(.system(size: 15, weight: .bold, design: .rounded))
                                 } else {
-                                    Image(systemName: "bolt.shield.fill")
-                                    Text("Lookup Vehicle")
-                                        .fontWeight(.bold)
+                                    ZStack {
+                                        Circle()
+                                            .fill(Color.white.opacity(0.2))
+                                            .frame(width: 26, height: 26)
+                                        Image(systemName: "arrow.up.right")
+                                            .font(.system(size: 12, weight: .heavy))
+                                    }
+                                    Text("Search Vehicle Details")
+                                        .font(.system(size: 15, weight: .bold, design: .rounded))
                                 }
                             }
-                            .font(.system(size: 15))
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 13)
+                            .padding(.vertical, 14)
                             .background(
-                                LinearGradient(
-                                    colors: [primaryAccent.opacity(0.9), secondaryAccent.opacity(0.9)],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
+                                ZStack {
+                                    LinearGradient(
+                                        colors: [
+                                            primaryAccent.opacity(0.95),
+                                            secondaryAccent.opacity(0.92)
+                                        ],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+
+                                    // Top Glass Specular Shine
+                                    LinearGradient(
+                                        colors: [
+                                            Color.white.opacity(0.32),
+                                            Color.white.opacity(0.05),
+                                            Color.clear
+                                        ],
+                                        startPoint: .top,
+                                        endPoint: .bottom
+                                    )
+                                }
                             )
-                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                            .shadow(color: primaryAccent.opacity(0.35), radius: 12, y: 5)
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .stroke(
+                                        LinearGradient(
+                                            colors: [Color.white.opacity(0.55), Color.white.opacity(0.1)],
+                                            startPoint: .top,
+                                            endPoint: .bottom
+                                        ),
+                                        lineWidth: 1
+                                    )
+                            )
+                            .shadow(color: primaryAccent.opacity(0.4), radius: 14, y: 6)
                         }
-                        .buttonStyle(GlowPressStyle(shape: RoundedRectangle(cornerRadius: 14, style: .continuous)))
+                        .buttonStyle(GlowPressStyle(shape: RoundedRectangle(cornerRadius: 16, style: .continuous)))
                         .disabled(isLoading)
                     }
                     .padding(14)
                     .background(Color.white.opacity(0.04))
-                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .stroke(Color.white.opacity(0.09), lineWidth: 1)
                     )
                     .padding(.horizontal)
 
@@ -235,50 +379,75 @@ struct ContentView: View {
                                 .foregroundColor(.red)
                                 .font(.title3)
                             Text(errorMessage)
-                                .font(.subheadline)
+                                .font(.system(size: 13, weight: .medium, design: .rounded))
                                 .foregroundColor(.white.opacity(0.92))
                             Spacer()
                         }
                         .padding(14)
-                        .background(Color.red.opacity(0.15))
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .background(Color.red.opacity(0.14))
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
                                 .stroke(Color.red.opacity(0.35), lineWidth: 1)
                         )
                         .padding(.horizontal)
                     }
 
-                    // Pro Results View
+                    // Results Section
                     if !items.isEmpty || !rawResponse.isEmpty {
                         VStack(spacing: 12) {
-                            // Mode Switcher & Copy All Button
-                            HStack(spacing: 10) {
-                                Picker("View", selection: $showRaw) {
-                                    Text("Pro Card View").tag(false)
-                                    Text("Raw JSON").tag(true)
+                            // Custom Modern Sliding Pill Switcher + Action Pills
+                            HStack(spacing: 8) {
+                                // Custom Sliding Tab Control
+                                HStack(spacing: 0) {
+                                    tabButton(title: "Pro Cards", icon: "square.grid.2x2.fill", isRawTab: false)
+                                    tabButton(title: "Raw JSON", icon: "curlybraces", isRawTab: true)
                                 }
-                                .pickerStyle(.segmented)
+                                .padding(4)
+                                .background(Color.white.opacity(0.06))
+                                .clipShape(Capsule())
+                                .overlay(
+                                    Capsule()
+                                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                                )
 
+                                Spacer()
+
+                                // Copy All Pill Button
                                 Button {
                                     copyAllResults()
                                 } label: {
                                     HStack(spacing: 5) {
                                         Image(systemName: "doc.on.doc.fill")
-                                        Text("Copy All")
+                                        Text("Copy")
                                     }
-                                    .font(.caption)
-                                    .fontWeight(.semibold)
+                                    .font(.system(size: 12, weight: .bold, design: .rounded))
                                     .foregroundColor(.white)
                                     .padding(.horizontal, 12)
-                                    .padding(.vertical, 8)
-                                    .background(Color.white.opacity(0.1))
-                                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                    .padding(.vertical, 9)
+                                    .background(Color.white.opacity(0.09))
+                                    .clipShape(Capsule())
                                     .overlay(
-                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                            .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                                        Capsule()
+                                            .stroke(Color.white.opacity(0.14), lineWidth: 1)
                                     )
                                 }
+                                .buttonStyle(ModernPillButtonStyle())
+
+                                // Share Pill Button
+                                ShareLink(item: formattedShareText) {
+                                    Image(systemName: "square.and.arrow.up")
+                                        .font(.system(size: 13, weight: .bold))
+                                        .foregroundColor(.white)
+                                        .frame(width: 34, height: 34)
+                                        .background(primaryAccent.opacity(0.22))
+                                        .clipShape(Circle())
+                                        .overlay(
+                                            Circle()
+                                                .stroke(primaryAccent.opacity(0.45), lineWidth: 1)
+                                        )
+                                }
+                                .buttonStyle(ModernPillButtonStyle())
                             }
                             .padding(.horizontal)
 
@@ -291,10 +460,10 @@ struct ContentView: View {
                                         .padding(16)
                                         .textSelection(.enabled)
                                 }
-                                .background(Color.white.opacity(0.05))
-                                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                                .background(Color.white.opacity(0.045))
+                                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
                                 .borderBeam(
-                                    RoundedRectangle(cornerRadius: 18, style: .continuous),
+                                    RoundedRectangle(cornerRadius: 20, style: .continuous),
                                     active: true,
                                     lineWidth: 1.4,
                                     duration: 3.5,
@@ -307,26 +476,25 @@ struct ContentView: View {
                                         // Hero Plate Card
                                         VStack(alignment: .leading, spacing: 12) {
                                             HStack {
-                                                HStack(spacing: 8) {
-                                                    Image(systemName: "rectangle.and.text.magnifyingglass")
+                                                HStack(spacing: 6) {
+                                                    Image(systemName: "checkmark.seal.fill")
                                                         .foregroundColor(primaryAccent)
-                                                    Text("REGISTRATION PLATE")
-                                                        .font(.caption2)
-                                                        .fontWeight(.bold)
+                                                    Text("OFFICIAL RC RECORD")
+                                                        .font(.system(size: 10, weight: .heavy))
                                                         .tracking(1.5)
-                                                        .foregroundColor(.white.opacity(0.6))
+                                                        .foregroundColor(.white.opacity(0.65))
                                                 }
                                                 Spacer()
-                                                Text("VERIFIED DATA")
-                                                    .font(.system(size: 10, weight: .bold))
-                                                    .padding(.horizontal, 8)
+                                                Text("ACTIVE")
+                                                    .font(.system(size: 10, weight: .heavy))
+                                                    .padding(.horizontal, 9)
                                                     .padding(.vertical, 4)
-                                                    .background(primaryAccent.opacity(0.18))
-                                                    .foregroundColor(primaryAccent)
+                                                    .background(Color.green.opacity(0.2))
+                                                    .foregroundColor(.green)
                                                     .clipShape(Capsule())
                                             }
 
-                                            // Number Plate Display
+                                            // Number Plate Display with Modern Copy Pill
                                             HStack {
                                                 Text(searchedPlate.isEmpty ? vehicleNumber.uppercased() : searchedPlate)
                                                     .font(.system(size: 24, weight: .black, design: .monospaced))
@@ -338,45 +506,61 @@ struct ContentView: View {
                                                     UIPasteboard.general.string = plate
                                                     showToast("Copied \(plate)")
                                                 } label: {
-                                                    Image(systemName: "copy")
-                                                        .foregroundColor(.white.opacity(0.75))
-                                                        .padding(8)
-                                                        .background(Color.white.opacity(0.08))
-                                                        .clipShape(Circle())
+                                                    HStack(spacing: 4) {
+                                                        Image(systemName: "doc.on.doc")
+                                                        Text("Copy")
+                                                    }
+                                                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                                                    .foregroundColor(.white.opacity(0.9))
+                                                    .padding(.horizontal, 10)
+                                                    .padding(.vertical, 6)
+                                                    .background(Color.white.opacity(0.1))
+                                                    .clipShape(Capsule())
                                                 }
+                                                .buttonStyle(ModernPillButtonStyle())
                                             }
                                             .padding(12)
-                                            .background(Color.black.opacity(0.35))
-                                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                            .background(Color.black.opacity(0.38))
+                                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                                             .overlay(
-                                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                                RoundedRectangle(cornerRadius: 14, style: .continuous)
                                                     .stroke(Color.white.opacity(0.12), lineWidth: 1)
                                             )
 
-                                            // Top Highlight Mini-Grid
+                                            // Top Highlight Grid
                                             if !highlightItems.isEmpty {
                                                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                                                     ForEach(highlightItems) { info in
-                                                        VStack(alignment: .leading, spacing: 4) {
-                                                            HStack(spacing: 5) {
-                                                                Image(systemName: info.icon)
-                                                                    .font(.caption2)
-                                                                    .foregroundColor(primaryAccent)
-                                                                Text(info.key)
-                                                                    .font(.system(size: 10, weight: .semibold))
-                                                                    .foregroundColor(.white.opacity(0.55))
-                                                                    .lineLimit(1)
+                                                        Button {
+                                                            UIPasteboard.general.string = info.value
+                                                            showToast("Copied \(info.key)")
+                                                        } label: {
+                                                            VStack(alignment: .leading, spacing: 5) {
+                                                                HStack(spacing: 5) {
+                                                                    Image(systemName: info.icon)
+                                                                        .font(.caption2)
+                                                                        .foregroundColor(primaryAccent)
+                                                                    Text(info.key)
+                                                                        .font(.system(size: 10, weight: .bold))
+                                                                        .foregroundColor(.white.opacity(0.55))
+                                                                        .lineLimit(1)
+                                                                }
+                                                                Text(info.value)
+                                                                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                                                                    .foregroundColor(.white)
+                                                                    .lineLimit(2)
+                                                                    .multilineTextAlignment(.leading)
                                                             }
-                                                            Text(info.value)
-                                                                .font(.caption)
-                                                                .fontWeight(.bold)
-                                                                .foregroundColor(.white)
-                                                                .lineLimit(2)
+                                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                                            .padding(11)
+                                                            .background(Color.white.opacity(0.055))
+                                                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                                            .overlay(
+                                                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                                                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                                                            )
                                                         }
-                                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                                        .padding(10)
-                                                        .background(Color.white.opacity(0.05))
-                                                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                                        .buttonStyle(ModernPillButtonStyle())
                                                     }
                                                 }
                                             }
@@ -385,29 +569,28 @@ struct ContentView: View {
                                         .background(
                                             LinearGradient(
                                                 colors: [
-                                                    primaryAccent.opacity(0.14),
+                                                    primaryAccent.opacity(0.16),
                                                     Color.white.opacity(0.04)
                                                 ],
                                                 startPoint: .topLeading,
                                                 endPoint: .bottomTrailing
                                             )
                                         )
-                                        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                                        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
                                         .borderBeam(
-                                            RoundedRectangle(cornerRadius: 20, style: .continuous),
+                                            RoundedRectangle(cornerRadius: 22, style: .continuous),
                                             active: true,
                                             lineWidth: 1.5,
                                             duration: 3.2,
                                             intensity: 0.85
                                         )
 
-                                        // All Other Details Section
+                                        // Complete Specifications Cards
                                         if !detailItems.isEmpty {
-                                            VStack(alignment: .leading, spacing: 8) {
+                                            VStack(alignment: .leading, spacing: 9) {
                                                 Text("COMPLETE SPECIFICATIONS (\(detailItems.count))")
-                                                    .font(.caption2)
-                                                    .fontWeight(.bold)
-                                                    .tracking(1.4)
+                                                    .font(.system(size: 10, weight: .heavy))
+                                                    .tracking(1.5)
                                                     .foregroundColor(.white.opacity(0.5))
                                                     .padding(.horizontal, 4)
 
@@ -419,11 +602,11 @@ struct ContentView: View {
                                                         } label: {
                                                             HStack(spacing: 12) {
                                                                 ZStack {
-                                                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                                                        .fill(primaryAccent.opacity(0.12))
-                                                                        .frame(width: 36, height: 36)
+                                                                    RoundedRectangle(cornerRadius: 11, style: .continuous)
+                                                                        .fill(primaryAccent.opacity(0.14))
+                                                                        .frame(width: 38, height: 38)
                                                                     Image(systemName: item.icon)
-                                                                        .font(.system(size: 14, weight: .semibold))
+                                                                        .font(.system(size: 14, weight: .bold))
                                                                         .foregroundColor(primaryAccent)
                                                                 }
 
@@ -433,8 +616,7 @@ struct ContentView: View {
                                                                         .foregroundColor(.white.opacity(0.55))
 
                                                                     Text(item.value)
-                                                                        .font(.subheadline)
-                                                                        .fontWeight(.semibold)
+                                                                        .font(.system(size: 14, weight: .bold, design: .rounded))
                                                                         .foregroundColor(.white)
                                                                         .multilineTextAlignment(.leading)
                                                                 }
@@ -442,18 +624,21 @@ struct ContentView: View {
                                                                 Spacer()
 
                                                                 Image(systemName: "doc.on.doc")
-                                                                    .font(.caption)
-                                                                    .foregroundColor(.white.opacity(0.28))
+                                                                    .font(.system(size: 12, weight: .semibold))
+                                                                    .foregroundColor(.white.opacity(0.35))
+                                                                    .padding(8)
+                                                                    .background(Color.white.opacity(0.05))
+                                                                    .clipShape(Circle())
                                                             }
                                                             .padding(12)
                                                             .background(Color.white.opacity(0.045))
-                                                            .clipShape(RoundedRectangle(cornerRadius: 15, style: .continuous))
+                                                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                                                             .overlay(
-                                                                RoundedRectangle(cornerRadius: 15, style: .continuous)
-                                                                    .stroke(Color.white.opacity(0.07), lineWidth: 1)
+                                                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                                                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
                                                             )
                                                         }
-                                                        .buttonStyle(.plain)
+                                                        .buttonStyle(ModernPillButtonStyle())
                                                     }
                                                 }
                                             }
@@ -466,23 +651,23 @@ struct ContentView: View {
                         }
                     } else if !isLoading && errorMessage == nil {
                         Spacer()
-                        VStack(spacing: 12) {
+                        VStack(spacing: 14) {
                             ZStack {
                                 Circle()
                                     .fill(Color.white.opacity(0.05))
-                                    .frame(width: 78, height: 78)
-                                    .borderBeam(Circle(), active: true, lineWidth: 1.5, duration: 3.0)
+                                    .frame(width: 82, height: 82)
+                                    .borderBeam(Circle(), active: true, lineWidth: 1.6, duration: 3.0)
 
                                 Image(systemName: "car.side.fill")
-                                    .font(.system(size: 32))
+                                    .font(.system(size: 34))
                                     .foregroundColor(primaryAccent)
                             }
 
                             Text("Ready for Lookup")
-                                .font(.headline)
-                                .foregroundColor(.white.opacity(0.92))
+                                .font(.system(size: 18, weight: .bold, design: .rounded))
+                                .foregroundColor(.white.opacity(0.95))
 
-                            Text("വാഹന നമ്പർ നൽകി Lookup Vehicle അമർത്തുക\nകാർഡുകൾ ടാപ്പ് ചെയ്ത് വിവരങ്ങൾ കോപ്പി ചെയ്യാം")
+                            Text("വാഹന നമ്പർ നൽകി Search Vehicle Details അമർത്തുക\nകാർഡുകൾ ടാപ്പ് ചെയ്ത് വിവരങ്ങൾ കോപ്പി ചെയ്യാം")
                                 .font(.caption)
                                 .foregroundColor(.white.opacity(0.5))
                                 .multilineTextAlignment(.center)
@@ -493,28 +678,28 @@ struct ContentView: View {
                     }
                 }
 
-                // Toast Notification
+                // Floating Glass Toast Notification
                 if let toast = copiedToast {
                     VStack {
                         Spacer()
-                        HStack(spacing: 6) {
+                        HStack(spacing: 8) {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundColor(.green)
                             Text(toast)
-                                .font(.caption)
-                                .fontWeight(.semibold)
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
                                 .foregroundColor(.white)
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
-                        .background(Color(red: 0.14, green: 0.16, blue: 0.22))
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 11)
+                        .background(.ultraThinMaterial)
+                        .background(Color(red: 0.12, green: 0.14, blue: 0.20).opacity(0.85))
                         .clipShape(Capsule())
                         .overlay(
                             Capsule()
-                                .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                                .stroke(Color.white.opacity(0.18), lineWidth: 1)
                         )
-                        .shadow(color: .black.opacity(0.4), radius: 12, y: 5)
-                        .padding(.bottom, 22)
+                        .shadow(color: .black.opacity(0.45), radius: 14, y: 6)
+                        .padding(.bottom, 24)
                     }
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
@@ -522,6 +707,46 @@ struct ContentView: View {
             .preferredColorScheme(.dark)
             .toolbar(.hidden, for: .navigationBar)
         }
+    }
+
+    // Custom Sliding Pill Tab Button
+    @ViewBuilder
+    private func tabButton(title: String, icon: String, isRawTab: Bool) -> some View {
+        let isActive = (showRaw == isRawTab)
+        Button {
+            let gen = UISelectionFeedbackGenerator()
+            gen.selectionChanged()
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.78)) {
+                showRaw = isRawTab
+            }
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: icon)
+                    .font(.system(size: 11, weight: .bold))
+                Text(title)
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+            }
+            .foregroundColor(isActive ? .white : .white.opacity(0.55))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(
+                ZStack {
+                    if isActive {
+                        Capsule()
+                            .fill(
+                                LinearGradient(
+                                    colors: [primaryAccent.opacity(0.85), secondaryAccent.opacity(0.85)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .matchedGeometryEffect(id: "ACTIVE_TAB", in: tabNamespace)
+                            .shadow(color: primaryAccent.opacity(0.35), radius: 6, y: 2)
+                    }
+                }
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     private func showToast(_ message: String) {
@@ -540,10 +765,7 @@ struct ContentView: View {
     }
 
     private func copyAllResults() {
-        let header = searchedPlate.isEmpty ? "" : "Vehicle: \(searchedPlate)\n"
-        let bodyText = items.map { "\($0.key): \($0.value)" }.joined(separator: "\n")
-        let combined = header + bodyText
-        UIPasteboard.general.string = combined.isEmpty ? rawResponse : combined
+        UIPasteboard.general.string = formattedShareText
         showToast("All details copied!")
     }
 
